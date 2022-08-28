@@ -2,10 +2,12 @@ package algorithms
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 )
 
-func arePermutation(s1 string, s2 string) bool {
-	fmt.Printf("arePermutation: str1=%s, str2=%s", s1, s2)
+func ArePermutation(s1 string, s2 string) bool {
+	// fmt.Println("arePermutation: str1=", s1, "str2=", s2)
 
 	map_counter := make(map[byte]int)
 
@@ -31,4 +33,11 @@ func arePermutation(s1 string, s2 string) bool {
 		}
 	}
 	return true
+}
+
+func Generate_key(w string) string {
+	s := strings.Split(w, "")
+	sort.Strings(s)
+	fmt.Println("Generate_key", strings.Join(s, ""))
+	return strings.Join(s, "")
 }
