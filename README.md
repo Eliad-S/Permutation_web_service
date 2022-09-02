@@ -37,23 +37,22 @@ go run main.go
 
 Now can now use the web service with the following requests:
 
-```
 http://localhost:8080//api/v1/similar?word=your_word
-```
-
->The result format is a JSON object as follows:
->{
->    similar:[list,of,words,that,are,similar,to,provided,word]
->}
-
->For example:
->http://localhost:8000/api/v1/similar?word=apple
->{"similar":["appel","pepla"]}
 
 ```
+The result format is a JSON object as follows:
+{
+    similar:[list,of,words,that,are,similar,to,provided,word]
+}
+
+For example:
+http://localhost:8000/api/v1/similar?word=apple
+{"similar":["appel","pepla"]}
+```
+
 http://localhost:8080/api/v1/stats
-```
 
+```
 Return general statistics about the program:
 Total number of words in the dictionary
 Total number of requests (not including "stats" requests)
@@ -66,14 +65,24 @@ The output is a JSON object structured as follows:
     avgProcessingTimeNs:int
 }
 
->For example:
->http://localhost:8000/api/v1/stats
->{"totalWords":351075,"totalRequests":9,"avgProcessingTimeNs":45239}
+For example:
+http://localhost:8000/api/v1/stats
+{"totalWords":351075,"totalRequests":9,"avgProcessingTimeNs":45239}
 ```
 
 ## How does it works?
 
-we are doing initial process to ni
+Two words w_1 and w_2 are considered similar if w_1 is a letter permutation of w_2 (e.g., "stressed" and "desserts").
 
+In order to intintify if 2 words are equal we are using hash map to count the number of times the letters appeared in the first, and compare it to the second.
+
+we are doing initial process to all words in words_clean.txt.
+
+we creates the following table:
+
+* Table name : "words", Columns : word
+* Table for more than one similar words we found, the table's will be a key constructed from the words's letters - sorted.
+
+As a result, in runtime we need only to create the key from the given word and find the relevant table to return the similar words to it.
 
 
