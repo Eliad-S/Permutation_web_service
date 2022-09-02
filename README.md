@@ -85,4 +85,12 @@ we creates the following table:
 
 As a result, in runtime we need only to create the key from the given word and find the relevant table to return the similar words to it.
 
+## Dummy client
+
+you can test the scalability of the web service using a HTTP client in a concurrent application we provided here.
+
+```
+go run dummy_client/client.go
+```
+
 
