@@ -3,32 +3,34 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 )
 
-func getPage(url string) (int, error) {
+func getPage(url string) error {
 	resp, err := http.Get(url)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
+
+	scanner := bufio.NewScanner(resp.Body)
+	for i := 0; scanner.Scan() && i < 5; i++ {
+		fmt.Println(scanner.Text())
 	}
-	// fmt.Println(body)
-	return len(body), nil
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	return nil
 }
 
 func worker(urlCh chan string, sizeCh chan string, id int) {
 	for {
 		url := <-urlCh
-		length, err := getPage(url)
+		err := getPage(url)
 		if err == nil {
-			sizeCh <- fmt.Sprintf("[%d] %s has length %d ", id, url, length)
+			sizeCh <- fmt.Sprintf("[%d] %s succedded", id, url)
 		} else {
 			sizeCh <- fmt.Sprintf("Error getting %s :: %s", url, err)
 		}
@@ -63,7 +65,7 @@ func main() {
 	urlCh := make(chan string)
 	sizeCh := make(chan string)
 
-	urls, err := Create_url_list("words_clean.txt")
+	urls, err := Create_url_list("../words_clean.txt")
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
