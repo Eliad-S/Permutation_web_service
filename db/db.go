@@ -260,13 +260,15 @@ func Get_similar_words(word string) ([]string, error) {
 		return similar_words, fmt.Errorf("db not connected")
 	}
 	key_table := algorithms.Generate_key(word)
-	_, table_check := db.Query("select * from %s;", key_table)
+	query := fmt.Sprintf("select * from `%s`", key_table)
+	fmt.Printf(query)
+	_, table_check := db.Query(query)
 
 	if table_check != nil {
-		fmt.Printf("Table for word '%s' doesn't exist, no similar words", word)
+		fmt.Printf("Table for word '%s' doesn't exist, no similar words, Err: %v", word, table_check)
 		return similar_words, nil
 	}
-	query := fmt.Sprintf("SELECT * FROM `%s` WHERE word != '%s';", key_table, word)
+	query = fmt.Sprintf("SELECT * FROM `%s` WHERE word != '%s'", key_table, word)
 	fmt.Println(query)
 	rows, err := db.Query(query)
 	if err != nil {
