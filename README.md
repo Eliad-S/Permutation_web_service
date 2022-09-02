@@ -1,6 +1,6 @@
 # Permutation_web_service
 A small web service for printing similar words in the English language.
-The web service listen on localhost, port 8000.
+The web service listen on localhost, port 8080.
 
 This project was created using the following technologies:
  * Backend:
@@ -66,7 +66,7 @@ The output is a JSON object structured as follows:
 }
 
 For example:
-http://localhost:8000/api/v1/stats
+http://localhost:8080/api/v1/stats
 {"totalWords":351075,"totalRequests":9,"avgProcessingTimeNs":45239}
 ```
 
