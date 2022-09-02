@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"log"
 	"sync"
 
 	"github.com/Eliad-S/Permutation_web_service/db"
@@ -36,7 +37,12 @@ func Set_TotalWords() {
 	//mutex
 	mu.Lock()
 	defer mu.Unlock()
-	stats.TotalWords = db.Get_total_words()
+	total_words, err := db.Get_total_words()
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		stats.TotalWords = total_words
+	}
 }
 
 func Get_TotalWords() uint32 {

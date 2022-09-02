@@ -66,6 +66,8 @@ func GetSimilar(w http.ResponseWriter, r *http.Request) {
 	similar_words, err := db.Get_similar_words(word)
 	if err != nil {
 		panic(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	similar := Similar_words{Similar: similar_words}
 	w.Header().Set("Content-Type", "application/json")
