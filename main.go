@@ -15,10 +15,11 @@ func main() {
 	DBClnPtr := flag.Bool("DBCln", false, "usage: {True|Flase}")
 	flag.Parse()
 
-	err := db.ConnectMySql()
+	sql_db, err := db.ConnectMySql()
 	if err != nil {
 		log.Fatal("Error ConnectMySql" + err.Error())
 	}
+	defer sql_db.Close()
 
 	if *DBClnPtr {
 		err = db.Process_words_from_file("words_clean.txt")

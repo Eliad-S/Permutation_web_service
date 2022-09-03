@@ -26,12 +26,12 @@ type Word struct {
 	permutation_table_key string
 }
 
-func ConnectMySql() error {
+func ConnectMySql() (*sql.DB, error) {
 	// Capture connection properties.
 	err := godotenv.Load("local.env")
 	if err != nil {
 		log.Fatalf("Some error occured. Err: %s", err)
-		return err
+		return nil, err
 	}
 
 	cfg := mysql.Config{
@@ -44,21 +44,21 @@ func ConnectMySql() error {
 	// Get a database handle.
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pingErr := db.Ping()
 	if pingErr != nil {
-		return pingErr
+		return nil, pingErr
 	}
 	fmt.Println("Connected!")
 
 	err = Select_database(os.Getenv("DB_NAME"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return db, nil
 }
 
 func Process_words_from_file(file_name string) error {
@@ -261,13 +261,20 @@ func Get_similar_words(word string) ([]string, error) {
 	}
 	key_table := algorithms.Generate_key(word)
 	query := fmt.Sprintf("select * from `%s`", key_table)
-	fmt.Printf(query)
-	_, table_check := db.Query(query)
+	fmt.Println(query)
+	table, table_check := db.Query(query)
 
-	if table_check != nil {
+	switch {
+	case table_check == sql.ErrNoRows:
 		fmt.Printf("Table for word '%s' doesn't exist, no similar words, Err: %v", word, table_check)
+	case table_check != nil:
+		fmt.Printf("Err: %v", table_check)
 		return similar_words, nil
+	default:
+
 	}
+	defer table.Close()
+
 	query = fmt.Sprintf("SELECT * FROM `%s` WHERE word != '%s'", key_table, word)
 	fmt.Println(query)
 	rows, err := db.Query(query)

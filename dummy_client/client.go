@@ -70,7 +70,7 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 3; i++ {
 		go worker(urlCh, sizeCh, i)
 	}
 
