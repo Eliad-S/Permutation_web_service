@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -13,26 +12,6 @@ import (
 
 type Similar_words struct {
 	Similar []string `jsob:"similar`
-}
-
-func GetRoot(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	hasFirst := r.URL.Query().Has("first")
-	first := r.URL.Query().Get("first")
-	hasSecond := r.URL.Query().Has("second")
-	second := r.URL.Query().Get("second")
-
-	fmt.Printf("%s: got / request. first(%t)=%s, second(%t)=%s\n",
-		ctx.Value(keyServerAddr),
-		hasFirst, first,
-		hasSecond, second)
-	if first == "" {
-		w.Header().Set("x-missing-field", "myName")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	io.WriteString(w, "This is my website!\n")
 }
 
 func GetStats(w http.ResponseWriter, r *http.Request) {

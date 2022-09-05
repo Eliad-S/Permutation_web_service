@@ -8,6 +8,8 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/Eliad-S/Permutation_web_service/algorithms"
 	"github.com/go-sql-driver/mysql"
@@ -34,6 +36,10 @@ func ConnectMySql() (*sql.DB, error) {
 		return nil, err
 	}
 
+	err = Creat_database_if_not_exists(os.Getenv("DB_NAME"))
+	if err != nil {
+		return nil, err
+	}
 	cfg := mysql.Config{
 		User:   os.Getenv("DBUSER"),
 		Passwd: os.Getenv("DBPASS"),
@@ -51,13 +57,11 @@ func ConnectMySql() (*sql.DB, error) {
 	if pingErr != nil {
 		return nil, pingErr
 	}
+
 	fmt.Println("Connected!")
-
-	err = Select_database(os.Getenv("DB_NAME"))
-	if err != nil {
-		return nil, err
-	}
-
+	db.SetMaxIdleConns(10000)
+	db.SetMaxOpenConns(10000)
+	db.SetConnMaxLifetime(time.Minute * 3)
 	return db, nil
 }
 
@@ -116,7 +120,7 @@ func Add_permotaion_table_to_db(permotaion_table_name string, words []string) er
 	if db == nil {
 		return fmt.Errorf("db not connected")
 	}
-	drop_table(permotaion_table_name)
+	// drop_table(permotaion_table_name)
 	// Create permotaion table
 	create_table_query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS `%s` (word VARCHAR(255) NOT NULL, PRIMARY KEY (word))", permotaion_table_name)
 	fmt.Println(create_table_query)
@@ -125,7 +129,7 @@ func Add_permotaion_table_to_db(permotaion_table_name string, words []string) er
 		return fmt.Errorf("Error : In Add_permotaion_table_to_db. Err: %s", err)
 	}
 	// add items to table
-	insert_query := fmt.Sprintf("INSERT INTO `%s` (word) VALUES %s", permotaion_table_name, Join(words))
+	insert_query := fmt.Sprintf("INSERT IGNORE INTO `%s` (word) VALUES %s", permotaion_table_name, Join(words))
 	fmt.Println(insert_query)
 	_, err = db.Exec(insert_query)
 	if err != nil {
@@ -162,25 +166,30 @@ func create_permotaion_tables(map_table map[string][]string) {
 	maxGoroutines := 10
 	guard := make(chan struct{}, maxGoroutines)
 
-	// var wg sync.WaitGroup
+	var wg sync.WaitGroup
+	start := time.Now()
 
 	for table_name, words := range map_table {
 		if len(words) > 1 {
-			// wg.Add(1)
+			wg.Add(1)
 			guard <- struct{}{} // would block if guard channel is already filled
-			go func(table_name string, words []string) {
+			go func(table_name string, words []string, wg *sync.WaitGroup) {
 				fmt.Println("Key:", table_name, "=>", "words:", words)
 				if err := Add_permotaion_table_to_db(table_name, words); err != nil {
 					log.Fatalf("Error occured in 'Add_permotaion_table_to_db'. Err: %s", err)
+					<-guard
 					return
 				}
-				// defer wg.Done()
+				defer wg.Done()
 				Update_words_on_db(table_name, words)
 				<-guard
-			}(table_name, words)
+			}(table_name, words, &wg)
 		}
 	}
-	// wg.Wait()
+	wg.Wait()
+	close(guard)
+	duration := time.Since(start)
+	fmt.Println(duration.Minutes())
 }
 
 func Append_words_to_db(words []string) {
@@ -264,14 +273,9 @@ func Get_similar_words(word string) ([]string, error) {
 	fmt.Println(query)
 	table, table_check := db.Query(query)
 
-	switch {
-	case table_check == sql.ErrNoRows:
-		fmt.Printf("Table for word '%s' doesn't exist, no similar words, Err: %v", word, table_check)
-	case table_check != nil:
-		fmt.Printf("Err: %v", table_check)
+	if table_check != nil {
+		fmt.Printf("Table '%s' doesn't exist, return empty list\n", key_table)
 		return similar_words, nil
-	default:
-
 	}
 	defer table.Close()
 
@@ -312,13 +316,29 @@ func Get_total_words() (uint32, error) {
 }
 
 func Creat_database_if_not_exists(database_name string) error {
-	if db == nil {
-		return fmt.Errorf("db not connected")
+	cfg := mysql.Config{
+		User:   os.Getenv("DBUSER"),
+		Passwd: os.Getenv("DBPASS"),
+		Net:    "tcp",
+		Addr:   "127.0.0.1:3306",
+	}
+
+	// Get a database handle.
+	db, err := sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	pingErr := db.Ping()
+	if pingErr != nil {
+		return pingErr
 	}
 
 	drop_query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`", database_name)
 	fmt.Println(drop_query)
-	_, err := db.Exec(drop_query)
+	_, err = db.Exec(drop_query)
 	if err != nil {
 		log.Fatalf("Error occured creating database '%s' Err: %s", database_name, err)
 		return err
@@ -332,7 +352,7 @@ func Select_database(database_name string) error {
 		return fmt.Errorf("db not connected")
 	}
 
-	select_db := fmt.Sprintf("use `%s`", database_name)
+	select_db := fmt.Sprintf("use `%s`;", database_name)
 	fmt.Println(select_db)
 	_, err := db.Exec(select_db)
 	if err != nil {
@@ -340,5 +360,20 @@ func Select_database(database_name string) error {
 		return err
 	}
 
+	return nil
+}
+
+func Drop_database(database_name string) error {
+	if db == nil {
+		return fmt.Errorf("db not connected")
+	}
+
+	drop_query := fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", database_name)
+	fmt.Println(drop_query)
+	_, err := db.Exec(drop_query)
+	if err != nil {
+		log.Fatalf("Error occured Drop_database '%s' Err: %s", database_name, err)
+		return err
+	}
 	return nil
 }
