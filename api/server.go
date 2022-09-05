@@ -12,7 +12,6 @@ const keyServerAddr = "serverAddr"
 
 func InitilizeServer() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", GetRoot)
 	mux.HandleFunc("/api/v1/similar", GetSimilar)
 	mux.HandleFunc("/api/v1/stats", GetStats)
 
